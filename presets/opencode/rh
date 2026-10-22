@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# rh: openchamber launcher. A thin wrapper over opencode that boots straight
+# into the redhunter agent with the toolchain env active. NOT a fork - the
+# skill stays harness-agnostic; this is just the preset entry point.
+#
+#   rh [hunt] [dir]   launch opencode --agent redhunter (in dir, default cwd)
+#   rh dev            doctor + regression suite (verify the skill is intact)
+#   rh doctor         environment readiness only
+#   rh install        install/refresh this preset into ~/.config/opencode
+#   rh help
+set -euo pipefail
+
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+REPO="$(cd "$(dirname "$SELF")/../.." && pwd)"   # <repo>/presets/opencode/rh -> <repo>
+ENVF="$HOME/.rh-tools/env.sh"
+[ -f "$ENVF" ] && . "$ENVF" || true
+
+cmd="${1:-hunt}"; [ $# -gt 0 ] && shift || true
+case "$cmd" in
+  hunt)
+    dir="$(cd "${1:-$PWD}" 2>/dev/null && pwd -P)" || { echo "[rh] no such dir: ${1:-$PWD}"; exit 1; }
+    # Guard: never hunt inside the skill repo. Engagement data written to cwd
+    # (journal.md, targets/, *.jsonl) must never land in the skill clone.
+    repo_p="$(cd "$REPO" && pwd -P)"
+    if [ "${RH_ALLOW_REPO_CWD:-0}" != 1 ]; then
+      case "$dir/" in
+        "$repo_p/"*)
+          echo "[rh] REFUSING to hunt inside the skill repo: $repo_p"
+          echo "[rh] engagements scaffold in their own directory, never in the skill clone."
+          echo "[rh] fix:  mkdir -p ~/redhunting/<target> && cd ~/redhunting/<target> && rh"
+          echo "[rh] (override, not advised: RH_ALLOW_REPO_CWD=1 rh)"
+          exit 1 ;;
+      esac
+    fi
+    command -v opencode >/dev/null 2>&1 || { echo "[rh] opencode not on PATH"; exit 1; }
+    cd "$dir"
+    echo "[rh] launching redhunter in $dir (egress: $(curl -s --max-time 5 ifconfig.me 2>/dev/null || echo unknown))"
+    [ "${RH_DRYRUN:-0}" = 1 ] && { echo "[rh] (dry-run) would exec: opencode --agent redhunter"; exit 0; }
+    exec opencode --agent redhunter
+    ;;
+  dev)
+    echo "[rh] doctor"; python3 "$REPO/bin/rh_doctor.py" || true
+    echo "[rh] regression suite"; python3 -m unittest discover -s "$REPO/tests"
+    echo "[rh] demo app (offline, 127.0.0.1): python3 $REPO/demo/serve.py <port>"
+    ;;
+  doctor) exec python3 "$REPO/bin/rh_doctor.py" ;;
+  install) exec "$REPO/presets/opencode/install-preset.sh" "$@" ;;
+  help|-h|--help)
+    sed -n '2,10p' "$SELF" | sed 's/^# \{0,1\}//'
+    ;;
+  *) echo "[rh] unknown: $cmd (try: rh help)"; exit 2 ;;
+esac

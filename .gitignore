@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.DS_Store
+tools/apkpure/downloads/
+tools/**/downloads/
+*.apk
+*.xapk
+*.ipa
+*.asar
+state/
+
+# stray workspace learn-back must never enter the skill repo (AGENTS.md)
+/journal.md

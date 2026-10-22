@@ -1,0 +1,99 @@
+{
+  "identity": {
+    "mode": "random per engagement",
+    "generated_by": "bin/rh_kickoff.py",
+    "never_reuse_across_targets": true
+  },
+  "hunt": {
+    "sprint_default_minutes": 60,
+    "mode_default": "static",
+    "adb_default": "detect",
+    "accounts": "self-registered via tempmail, always two (A and B)",
+    "rate": "auto-derived from target behavior: start at pacing.delay_ms, back off on any 429/5xx, never push through",
+    "sprint_min_minutes": 30,
+    "sprint_floor_rule": "the configured sprint length is a floor: a session may run longer, never shorter. rh_clock wrap refuses while sprint time remains"
+  },
+  "machine": {
+    "memory_floor_mb": 2048,
+    "max_hunt_process_mb": 1500,
+    "max_duplicate_instances": 1,
+    "watch_patterns": [
+      "npx",
+      "npm exec",
+      "jshook",
+      "mcp[-_]server",
+      "mcp$",
+      "frida",
+      "mitmdump",
+      "mitmproxy",
+      "adb",
+      "jadx",
+      "apktool",
+      "blutter",
+      "ghidra",
+      "burp",
+      "codegraph",
+      "interactsh",
+      "nuclei",
+      "subfinder",
+      "httpx",
+      "ffuf",
+      "katana"
+    ],
+    "guard_at_setup": true,
+    "guard_at_wrap": true,
+    "note": "the incident this exists for: npx-spawned MCP servers do not die with the session; each new session spawns fresh instances and the old ones linger, stacking hundreds of MB each until the machine thrashes. rh_guard.py status/reap/budget enforces the limits; kickoff and wrap run it automatically"
+  },
+  "workspace": {
+    "root": "./",
+    "env_override": "RH_HOME",
+    "append_only": [
+      "ledger.jsonl",
+      "leads.jsonl",
+      "sprints.jsonl",
+      "journal"
+    ],
+    "never_auto_cleanup": true,
+    "note_layout": "bug-hunting scaffold pattern: the target workspace is created in the directory the tool is invoked from (./<slug>/), never in the home root. Journal and playbook live in the skill's own knowledge/ folder; machine state in the skill's state/ folder"
+  },
+  "pacing": {
+    "delay_ms": 150,
+    "timeout_s": 20,
+    "retries": 2
+  },
+  "verification": {
+    "banned_words": [
+      "potential",
+      "candidate",
+      "likely",
+      "possibly",
+      "theoretical",
+      "could",
+      "maybe",
+      "appears"
+    ],
+    "retest_count": 2,
+    "record_minimum": 10,
+    "recency_window_days": 180,
+    "follow_through_required": true
+  },
+  "tools": {
+    "doctor_before_hunt": true,
+    "scanner_output_is_lead_only": true,
+    "missing_tools_skip_not_fail": true,
+    "mcp_expected": [
+      "cvss",
+      "tempmail",
+      "shodan",
+      "hacktricks",
+      "jadx",
+      "burp"
+    ],
+    "python_deps": [
+      "requests",
+      "androguard",
+      "curl_cffi",
+      "pycryptodome"
+    ]
+  }
+}
